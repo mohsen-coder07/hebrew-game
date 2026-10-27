@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>لعبة العبري</title>
+<style>
+:root{--bg:#eef3f1;--fg:#14213d;--card:#fff;--ac:#2a4bd7;--ok:#1f8a5b;--no:#c23b3b;--sand:#f2c14e;--ln:#c9d4d0}
+@media(prefers-color-scheme:dark){:root{--bg:#10151f;--fg:#eef1f7;--card:#1a2233;--ac:#7f9bff;--ok:#4cc88a;--no:#ff8080;--sand:#f2c14e;--ln:#2d3850}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,"Segoe UI",Tahoma,sans-serif;line-height:1.6}
+#app{max-width:480px;margin:auto;padding:20px 16px 40px;text-align:center}
+h1,h2{margin:.4em 0}
+.top{font-size:14px;opacity:.75;margin-bottom:6px}
+.bar{height:6px;background:var(--ln);border-radius:3px;margin:8px 0 18px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--ac)}
+.w{font-family:"Frank Ruhl Libre","David",Georgia,serif;font-size:44px;line-height:1.3;margin:14px 0;direction:rtl}
+.w.s{font-size:30px}
+button{display:block;width:100%;padding:14px;margin:9px 0;font-size:18px;border-radius:12px;border:2px solid var(--ln);background:var(--card);color:var(--fg);font-family:inherit}
+button:focus-visible,input:focus-visible{outline:3px solid var(--ac);outline-offset:2px}
+button.p{background:var(--ac);border-color:var(--ac);color:#fff;font-weight:600}
+button.g{border-style:dashed;font-size:15px;opacity:.8}
+button.ok{border-color:var(--ok);background:var(--ok);color:#fff}
+button.no{border-color:var(--no);background:var(--no);color:#fff}
+input{width:100%;padding:14px;font-size:20px;text-align:center;border-radius:12px;border:2px solid var(--ln);background:var(--card);color:var(--fg)}
+.big{font-size:64px;font-weight:700;color:var(--ac);margin:6px 0}
+.row{background:var(--card);border-radius:12px;padding:12px;margin:8px 0;text-align:start;border-inline-start:5px solid var(--no)}
+.row b{font-family:Georgia,serif;direction:rtl;unicode-bidi:isolate}
+.row.g2{border-inline-start-color:var(--ok)}
+.hist{display:flex;justify-content:space-between;align-items:center;text-align:start}
+.hist span:last-child{font-weight:700;color:var(--ac)}
+#m{min-height:1.6em;font-weight:600}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+const CODE="2005",NUM="201276969377",PER=15,API="PUT-WORKER-URL-HERE";
+// [عبري, عربي, مستوى]
+const W=[
+["שלום","سلام",1],["תודה","شكرا",1],["בית","بيت",1],["ספר","كتاب",1],["מים","ماء",1],["לחם","خبز",1],["ילד","ولد",1],["אמא","أم",1],["אבא","أب",1],["יום","يوم",1],["לילה","ليل",1],["כלב","كلب",1],["חתול","قطة",1],["שולחן","طاولة",1],["כיסא","كرسي",1],
+["חלון","نافذة",2],["דלת","باب",2],["מורה","معلم",2],["תלמיד","طالب",2],["עיר","مدينة",2],["רחוב","شارع",2],["אוכל","طعام",2],["שמש","شمس",2],["ירח","قمر",2],["חבר","صديق",2],["משפחה","عائلة",2],["כסף","مال",2],["עבודה","عمل",2],["שנה","سنة",2],["חודש","شهر",2],
+["ללמוד","يتعلم",3],["לכתוב","يكتب",3],["לקרוא","يقرأ",3],["לדבר","يتكلم",3],["לשמוע","يسمع",3],["לאכול","يأكل",3],["לשתות","يشرب",3],["ללכת","يذهب",3],["לבוא","يأتي",3],["לעבוד","يعمل",3],["לקנות","يشتري",3],["לשאול","يسأل",3],["לענות","يجيب",3],["לזכור","يتذكر",3],["לשכוח","ينسى",3],
+["התחלה","بداية",4],["סיפור","قصة",4],["שאלה","سؤال",4],["תשובה","جواب",4],["ממשלה","حكومة",4],["ביטחון","أمن",4],["מחשבה","فكرة",4],["בחירה","اختيار",4],["הזדמנות","فرصة",4],["אחריות","مسؤولية",4],["ניסיון","تجربة",4],["החלטה","قرار",4],["הצלחה","نجاح",4],["קושי","صعوبة",4],["הסכם","اتفاق",4]
+];
+const S=[
+["אני אוהב ללמוד עברית","أنا أحب تعلم العبرية",3],["הילד קורא ספר בבית","الولد يقرأ كتابا في البيت",3],["אנחנו הולכים לבית הספר","نحن ذاهبون إلى المدرسة",3],["אמא מכינה אוכל במטבח","أمي تحضّر الطعام في المطبخ",3],["החתול ישן על הכיסא","القطة نائمة على الكرسي",3],
+["אני רוצה לקנות לחם ומים","أريد أن أشتري خبزا وماء",4],["מתי אתה חוזר מהעבודה","متى تعود من العمل",4],["היום אנחנו לומדים מילים חדשות","اليوم نتعلم كلمات جديدة",4],["החבר שלי גר בעיר גדולה","صديقي يسكن في مدينة كبيرة",4],["אני לא זוכר איפה שמתי את הספר","لا أتذكر أين وضعت الكتاب",4],["כמה זה עולה","كم يكلف هذا",4],
+["למרות הקושי ההצלחה הגיעה בסוף","رغم الصعوبة جاء النجاح في النهاية",5],["החלטה חשובה דורשת מחשבה ואחריות","القرار المهم يتطلب تفكيرا ومسؤولية",5],["כל ניסיון נותן לנו הזדמנות ללמוד","كل تجربة تمنحنا فرصة للتعلم",5],["הוא סיפר סיפור מעניין על המשפחה שלו","روى قصة مثيرة عن عائلته",5],["אם תתאמן כל יום תדבר טוב יותר","إذا تدربت كل يوم ستتحدث أفضل",5]
+];
+let st;try{st=JSON.parse(localStorage.getItem("hb"))}catch(e){}
+st=st||{n:1,res:[],seen:{},in:0};
+const save=()=>{try{localStorage.setItem("hb",JSON.stringify(st))}catch(e){}};
+const $=document.getElementById("app");
+const shuf=a=>a.map(x=>[Math.random(),x]).sort((x,y)=>x[0]-y[0]).map(x=>x[1]);
+const lbl=n=>n<=8?"سهل":n<=16?"متوسط":n<=28?"متقدم":n<=40?"صعب":"خبيرة";
+let Q=[],qi=0,sc=0,wr=[],pre={};
+
+function take(p,k){
+  let f=p.filter(x=>!st.seen[x[0]]);
+  if(f.length<k){p.forEach(x=>delete st.seen[x[0]]);f=p.slice()}
+  const r=shuf(f).slice(0,k);r.forEach(x=>st.seen[x[0]]=1);return r;
+}
+const opt=(c,i,all)=>shuf([c[i],...shuf(all.filter(x=>x[i]!==c[i])).slice(0,3).map(x=>x[i])]);
+
+function build(n){
+  const mx=n<=8?1:n<=16?2:n<=28?3:4, mn=n<=8?1:mx-1;
+  const wp=W.filter(x=>x[2]>=mn&&x[2]<=mx);
+  const sn=n<20?0:n<35?4:6, ln=n>=6?3:0, sp=n>=30?4:n>=12?3:0;
+  const sl=n<35?[3,3]:n<45?[3,4]:[4,5];
+  const sp2=S.filter(x=>x[2]>=sl[0]&&x[2]<=sl[1]);
+  const wn=PER-sn-ln-sp;
+  const wi=take(wp,wn+ln+(n>=30?0:sp));
+  const q=[];
+  for(let i=0;i<wn;i++){
+    const c=wi.shift(), rev=(n>8&&i%2)||i%4==3;
+    q.push(rev?{t:"rev",p:c[1],h:c[0],ans:c[0],o:opt(c,0,wp)}:{t:"mean",p:c[0],h:c[0],ans:c[1],o:opt(c,1,wp)});
+  }
+  for(let i=0;i<ln;i++){const c=wi.shift();q.push({t:"listen",h:c[0],ans:c[1],o:opt(c,1,wp)})}
+  take(sp2,sn).forEach(c=>q.push({t:"sent",p:c[0],h:c[0],ans:c[1],o:opt(c,1,S)}));
+  (n>=30?take(sp2,sp):wi.splice(0,sp)).forEach(c=>q.push({t:"speak",p:c[0],h:c[0],ans:c[0]}));
+  return shuf(q).map(x=>(x.why=x.why||(x.t=="speak"?"انطقيها: "+x.h:x.t=="rev"?"الكلمة العبرية لـ "+x.p+" هي "+x.ans:x.h+" معناها: "+x.ans),x));
+}
+
+function say(t){try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang="he-IL";u.rate=.8;speechSynthesis.speak(u)}catch(e){}}
+
+function login(){
+  $.innerHTML=`<h1>לעברית 🇮🇱</h1><h2>لعبة العبري</h2><p>اكتبي الكود</p><input id="c" type="text" inputmode="numeric"><button class="p" onclick="chk()">دخول</button><p id="m"></p>`;
+}
+function chk(){
+  if(document.getElementById("c").value.trim()===CODE){st.in=1;save();home()}
+  else document.getElementById("m").textContent="الكود غلط، جرّبي تاني";
+}
+function home(){
+  $.innerHTML=`<h1>لعبة العبري</h1><div class="big">${st.n-1}</div><p>اختبار خلصتيهم</p><p>الاختبار الجاي: رقم ${st.n} · المستوى ${lbl(st.n)}</p><button class="p" onclick="start()">ابدئي الاختبار ${st.n}</button><button onclick="hist()">درجاتي ومراجعة الغلطات</button><button class="g" onclick="st.in=0;save();login()">خروج</button>`;
+  getQuiz(st.n);
+}
+const okq=x=>x&&x.h&&["mean","rev","listen","sent","gap","speak"].includes(x.t)&&(x.t=="speak"||(Array.isArray(x.o)&&x.o.length==4&&x.o[x.a]!==undefined&&x.why));
+async function ai(n){
+  if(!API||API.includes("PUT-"))throw 0;
+  const c=new AbortController(),tm=setTimeout(()=>c.abort(),30000);
+  try{
+    const r=await fetch(API,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({n,avoid:(st.used||[]).slice(-120)}),signal:c.signal});
+    const j=await r.json();
+    const q=(j.q||[]).filter(okq).map(x=>x.t=="speak"?{t:"speak",p:x.h,h:x.h,ans:x.h,why:x.why||"انطقيها: "+x.h}:{t:x.t,p:x.p||x.h,h:x.h,o:x.o,ans:x.o[x.a],why:x.why});
+    if(q.length<12)throw 0;
+    return q.slice(0,PER);
+  }finally{clearTimeout(tm)}
+}
+function getQuiz(n){if(!pre[n])pre[n]=ai(n).catch(()=>null);return pre[n]}
+async function start(){
+  $.innerHTML=`<div class="top">بجهّز أسئلة جديدة...</div><div class="bar"><i style="width:60%"></i></div>`;
+  const n=st.n;let q=await getQuiz(n);delete pre[n];
+  if(q)st.used=(st.used||[]).concat(q.map(x=>x.h)).slice(-300);else q=build(n);
+  Q=q;save();qi=0;sc=0;wr=[];show();
+  getQuiz(n+1);
+}
+function show(){
+  const q=Q[qi];
+  let h=`<div class="top">اختبار ${st.n} · ${lbl(st.n)} · سؤال ${qi+1} من ${Q.length}</div><div class="bar"><i style="width:${qi/Q.length*100}%"></i></div>`;
+  if(q.t=="speak"){
+    h+=`<p>انطقي بصوت واضح</p><div class="w ${q.h.length>12?'s':''}">${q.p}</div><button onclick="say(Q[qi].h)">🔊 اسمعيها الأول</button><button class="p" onclick="rec()">🎤 انطقي</button><p id="m"></p><button class="g" onclick="skip()">تخطي</button>`;
+  }else{
+    if(q.t=="listen")h+=`<p>اسمعي الكلمة وأختاري معناها</p><button onclick="say(Q[qi].h)">🔊 اسمعي</button>`;
+    else if(q.t=="gap")h+=`<p>كمّلي الجملة بالكلمة المناسبة</p><div class="w s">${q.p}</div>`;
+    else if(q.t=="rev")h+=`<p>إيه الكلمة بالعبري؟</p><div class="w" style="font-family:inherit;font-size:30px;direction:rtl">${q.p}</div>`;
+    else h+=`<p>معناها إيه؟</p><div class="w ${q.t=="sent"?'s':''}">${q.p}</div><button class="g" onclick="say(Q[qi].h)">🔊 اسمعيها</button>`;
+    h+=q.o.map((o,i)=>`<button class="o" onclick="ans(${i})"${(q.t=="rev"||q.t=="gap")?' style="font-family:Georgia,serif;font-size:24px;direction:rtl"':''}>${o}</button>`).join("");
+  }
+  $.innerHTML=h+`<div id="nx"></div>`;
+  if(q.t=="listen")say(q.h);
+}
+function mark(ok,mine){
+  const q=Q[qi];
+  if(ok)sc++;
+  wr.push({p:q.t=="listen"?q.h:q.p,m:mine,r:q.ans,ok:ok,w:q.why});
+  document.getElementById("nx").innerHTML=`<p style="font-weight:600;color:var(--${ok?'ok':'no'})">${ok?'✔ صح!':'✘ الصح: '+q.ans}</p><p>${q.why}</p><button class="p" onclick="nxt()">${qi+1<Q.length?'التالي':'شوفي النتيجة'}</button>`;
+}
+function ans(i){
+  const q=Q[qi],bs=document.querySelectorAll(".o");
+  bs.forEach((b,j)=>{b.disabled=true;if(q.o[j]===q.ans)b.classList.add("ok")});
+  if(q.o[i]!==q.ans)bs[i].classList.add("no");
+  mark(q.o[i]===q.ans,q.o[i]);
+}
+const norm=s=>s.replace(/[^\u05D0-\u05EA\s]/g," ").replace(/\s+/g," ").trim();
+function rec(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition,m=document.getElementById("m");
+  if(!SR){m.textContent="المتصفح ده مش بيدعم الميكروفون، افتحي الرابط من Chrome";return}
+  const r=new SR();r.lang="he-IL";
+  r.onresult=e=>{
+    const a=norm(Q[qi].h).split(" "),b=norm(e.results[0][0].transcript).split(" ");
+    const hit=a.filter(x=>b.includes(x)).length;
+    document.querySelectorAll("button").forEach(x=>x.disabled=true);
+    mark(hit/a.length>=.7,e.results[0][0].transcript);
+  };
+  r.onerror=()=>{m.textContent="ما سمعتش كويس، جرّبي تاني"};
+  r.onend=()=>{if(m.textContent==="بسمعك...")m.textContent="ما سمعتش كويس، جرّبي تاني"};
+  m.textContent="بسمعك...";r.start();
+}
+function skip(){document.querySelectorAll("button").forEach(x=>x.disabled=true);mark(false,"(تخطي)")}
+function nxt(){qi++;qi<Q.length?show():fin()}
+function fin(){
+  st.res.push({n:st.n,s:sc,t:Q.length,d:new Date().toLocaleDateString("ar-EG"),w:wr});
+  st.n++;if(st.res.length>80)st.res=st.res.slice(-80);
+  save();result(st.res.length-1,true);
+}
+function result(i,last){
+  const r=st.res[i],msg=encodeURIComponent(`درجتي في اختبار ${r.n} من لعبة العبري: ${r.s} من ${r.t}`);
+  $.innerHTML=`<h2>اختبار ${r.n}</h2><div class="big">${r.s} / ${r.t}</div>`+
+  (r.s==r.t?`<h3>ولا غلطة! 👏</h3>`:"")+`<h3>مراجعة الأسئلة</h3>`+r.w.map((x,k)=>`<div class="row ${x.ok?'g2':''}"><b>${k+1}. ${x.p}</b><br>${x.ok?'✔ إجابتك صح: <b>'+x.r+'</b>':'✘ إجابتك: '+x.m+'<br>الصح: <b>'+x.r+'</b>'}<br><small>${x.w||''}</small></div>`).join("")+
+  (last?`<button class="p" onclick="start()">الاختبار ${st.n}</button>`:"")+
+  `<button onclick="location.href='https://wa.me/${NUM}?text=${msg}'">ابعتي الدرجة</button><button class="g" onclick="${last?'home()':'hist()'}">رجوع</button>`;
+}
+function hist(){
+  $.innerHTML=`<h2>درجاتي</h2>`+(st.res.length?st.res.map((r,i)=>`<button class="hist" onclick="result(${i},false)"><span>اختبار ${r.n} · ${r.d}</span><span>${r.s}/${r.t}</span></button>`).join(""):`<p>لسه ما خلصتيش أي اختبار. ابدئي أول واحد!</p>`)+`<button class="g" onclick="home()">رجوع</button>`;
+}
+st.in?home():login();
+</script>
+</body>
+</html>
