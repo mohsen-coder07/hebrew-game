@@ -89,7 +89,7 @@ function build(n){
 function say(t){try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang="he-IL";u.rate=.8;speechSynthesis.speak(u)}catch(e){}}
 
 function login(){
-  $.innerHTML=`<h1>לעברית 🇮🇱</h1><h2>لعبة العبري</h2><p>اكتبي الكود</p><input id="c" type="text" inputmode="numeric"><button class="p" onclick="chk()">دخول</button><p id="m"></p>`;
+  $.innerHTML=`<h1>לעברית </h1><h2>لعبة العبري</h2><p>اكتبي الكود</p><input id="c" type="text" inputmode="numeric"><button class="p" onclick="chk()">دخول</button><p id="m"></p>`;
 }
 function chk(){
   if(document.getElementById("c").value.trim()===CODE){st.in=1;save();home()}
