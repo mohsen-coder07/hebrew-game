@@ -97,7 +97,7 @@ function chk(){
   else document.getElementById("m").textContent="الكود غلط، جرّبي تاني";
 }
 function home(){
-  $.innerHTML=`<h1>لعبة العبري</h1><div class="big">${st.n-1}</div><p>اختبار خلصتيهم</p><p>الاختبار الجاي: رقم ${st.n} · المستوى ${lbl(st.n)}</p><button class="p" onclick="start()">ابدئي الاختبار ${st.n}</button><button onclick="hist()">درجاتي ومراجعة الغلطات</button><button class="g" onclick="st.in=0;save();login()">خروج</button>`;
+  $.innerHTML=`<h1>ברוכה הבאה, המתרגמת חביבה</h1><div class="big">${st.n-1}</div><p>اختبار خلصتيهم</p><p>الاختبار الجاي: رقم ${st.n} · المستوى ${lbl(st.n)}</p><button class="p" onclick="start()">ابدئي الاختبار ${st.n}</button><button onclick="hist()">درجاتي ومراجعة الغلطات</button><button class="g" onclick="st.in=0;save();login()">خروج</button>`;
   getQuiz(st.n);
 }
 const okq=x=>x&&x.h&&["mean","rev","listen","sent","gap","speak"].includes(x.t)&&(x.t=="speak"||(Array.isArray(x.o)&&x.o.length==4&&x.o[x.a]!==undefined&&x.why));
