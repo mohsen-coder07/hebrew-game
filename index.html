@@ -35,102 +35,248 @@ input{width:100%;padding:14px;font-size:20px;text-align:center;border-radius:12p
 .hist{display:flex;justify-content:space-between;align-items:center;text-align:start}
 .hist span:last-child{font-weight:700;color:var(--ac)}
 #m{min-height:1.6em;font-weight:600}
+.tag{display:inline-block;font-size:12px;padding:2px 10px;border-radius:10px;background:var(--sand);color:#14213d;margin-bottom:6px}
 </style>
 </head>
 <body>
 <div id="app"></div>
 <script>
-const CODE="2005",NUM="201276969377",PER=15,API="https://hebrew-ai.posaossa.workers.dev/";
-// [عبري, عربي, مستوى]
+const CODE="2005",NUM="201276969377",PER=15,AIMAX=5,API="https://hebrew-ai.posaossa.workers.dev/";
+
+/* ============ المستويات: A1 → C1 ============ */
+const LV=[null,["A1","مبتدئ"],["A2","أساسي"],["B1","متوسط"],["B2","فوق المتوسط"],["C1","متقدم"]];
+const lvl=n=>n<=6?1:n<=12?2:n<=20?3:n<=30?4:5;
+const lbl=n=>{const l=LV[lvl(n)];return l[0]+" · "+l[1]};
+
+/* ============ بنك الكلمات [عبري, عربي, مستوى, نوع] ============
+   n اسم · v فعل · a صفة · o كلمات عامة
+   قاعدة: ممنوع تكرار نفس المعنى العربي لكلمتين عبريتين حتى ما يبقى فيه خيارين صح */
+const w=(l,c,s)=>s.split("|").map(p=>{const[h,a]=p.split("=");return[h,a,l,c]});
 const W=[
-["שלום","سلام",1],["תודה","شكرا",1],["בית","بيت",1],["ספר","كتاب",1],["מים","ماء",1],["לחם","خبز",1],["ילד","ولد",1],["אמא","أم",1],["אבא","أب",1],["יום","يوم",1],["לילה","ليل",1],["כלב","كلب",1],["חתול","قطة",1],["שולחן","طاولة",1],["כיסא","كرسي",1],
-["חלון","نافذة",2],["דלת","باب",2],["מורה","معلم",2],["תלמיד","طالب",2],["עיר","مدينة",2],["רחוב","شارع",2],["אוכל","طعام",2],["שמש","شمس",2],["ירח","قمر",2],["חבר","صديق",2],["משפחה","عائلة",2],["כסף","مال",2],["עבודה","عمل",2],["שנה","سنة",2],["חודש","شهر",2],
-["ללמוד","يتعلم",3],["לכתוב","يكتب",3],["לקרוא","يقرأ",3],["לדבר","يتكلم",3],["לשמוע","يسمع",3],["לאכול","يأكل",3],["לשתות","يشرب",3],["ללכת","يذهب",3],["לבוא","يأتي",3],["לעבוד","يعمل",3],["לקנות","يشتري",3],["לשאול","يسأل",3],["לענות","يجيب",3],["לזכור","يتذكر",3],["לשכוח","ينسى",3],
-["התחלה","بداية",4],["סיפור","قصة",4],["שאלה","سؤال",4],["תשובה","جواب",4],["ממשלה","حكومة",4],["ביטחון","أمن",4],["מחשבה","فكرة",4],["בחירה","اختيار",4],["הזדמנות","فرصة",4],["אחריות","مسؤولية",4],["ניסיון","تجربة",4],["החלטה","قرار",4],["הצלחה","نجاح",4],["קושי","صعوبة",4],["הסכם","اتفاق",4]
+...w(1,"o","שלום=سلام|תודה=شكرا|כן=نعم|לא=لا|סליחה=عذرا|בוקר טוב=صباح الخير|ערב טוב=مساء الخير|לילה טוב=تصبح على خير|אני=أنا|אתה=أنت|הוא=هو|היא=هي|אנחנו=نحن|אחד=واحد|שניים=اثنان|שלוש=ثلاثة|עשר=عشرة"),
+...w(1,"n","בית=بيت|ספר=كتاب|מים=ماء|לחם=خبز|חלב=حليب|ילד=ولد|ילדה=بنت|אמא=أم|אבא=أب|אח=أخ|אחות=أخت|יום=يوم|לילה=ليل|כלב=كلب|חתול=قط|שולחן=طاولة|כיסא=كرسي|מכונית=سيارة|תפוח=تفاحة|ביצה=بيضة"),
+...w(1,"a","גדול=كبير|קטן=صغير|טוב=جيد|רע=سيئ|חם=ساخن|קר=بارد|יפה=جميل|אדום=أحمر|כחול=أزرق|ירוק=أخضر|לבן=أبيض|שחור=أسود"),
+
+...w(2,"n","חלון=نافذة|דלת=باب|מורה=معلم|תלמיד=طالب|עיר=مدينة|רחוב=شارع|אוכל=طعام|שמש=شمس|ירח=قمر|חבר=صديق|משפחה=عائلة|כסף=مال|עבודה=عمل|שנה=سنة|חודש=شهر|שבוע=أسبوع|שעה=ساعة|מטבח=مطبخ|חדר=غرفة|גן=حديقة|שוק=سوق|חנות=متجر|רופא=طبيب|בית חולים=مستشفى|מסעדה=مطعم|ים=بحر|גשם=مطر|חורף=شتاء|קיץ=صيف|בגדים=ملابس|טלפון=هاتف|מחשב=حاسوب|דרך=طريق|ארוחה=وجبة|עוגה=كعكة|קפה=قهوة|תה=شاي|ירקות=خضروات|פירות=فواكه"),
+...w(2,"a","חדש=جديد|ישן=قديم|קל=سهل|קשה=صعب|מהיר=سريع|איטי=بطيء"),
+...w(2,"v","לאכול=يأكل|לשתות=يشرب|ללכת=يذهب|לבוא=يأتي|לראות=يرى|לשמוע=يسمع|לקחת=يأخذ|לתת=يعطي|לגור=يسكن|לאהוב=يحب"),
+
+...w(3,"v","ללמוד=يتعلم|לכתוב=يكتب|לקרוא=يقرأ|לדבר=يتكلم|לעבוד=يعمل|לקנות=يشتري|למכור=يبيع|לשאול=يسأل|לענות=يجيب|לזכור=يتذكر|לשכוח=ينسى|לחשוב=يفكر|להבין=يفهم|לשלוח=يرسل|לפתוח=يفتح|לסגור=يغلق|לחכות=ينتظر|לנסוע=يسافر|לחזור=يعود|לעזור=يساعد|לבקש=يطلب|להתחיל=يبدأ|לסיים=ينهي"),
+...w(3,"n","נסיעה=رحلة|חופשה=إجازة|מכתב=رسالة|חדשות=أخبار|שכן=جار|מקצוע=مهنة|משכורת=راتب|מחיר=سعر|אורח=ضيف|חוק=قانون|בריאות=صحة|מחלה=مرض|תרופה=دواء|כתובת=عنوان|תמונה=صورة|שיר=أغنية|סרט=فيلم|ביקור=زيارة|פגישה=اجتماع|תור=دور|אוטובוס=حافلة|רכבת=قطار|שדה תעופה=مطار|מזג אוויר=طقس|ארנק=محفظة|מפתח=مفتاح|קניון=مركز تسوق"),
+...w(3,"a","עייף=متعب|שמח=سعيد|עצוב=حزين|חשוב=مهم|מסוכן=خطير|נעים=لطيف|עשיר=غني|עני=فقير|חכם=ذكي|פנוי=متاح|עסוק=مشغول|רעב=جائع|צמא=عطشان"),
+
+...w(4,"n","התחלה=بداية|סיפור=قصة|שאלה=سؤال|תשובה=جواب|ממשלה=حكومة|ביטחון=أمن|מחשבה=تفكير|בחירה=اختيار|הזדמנות=فرصة|אחריות=مسؤولية|ניסיון=تجربة|החלטה=قرار|הצלחה=نجاح|קושי=صعوبة|הסכם=اتفاق|כלכלה=اقتصاد|תרבות=ثقافة|היסטוריה=تاريخ|מדע=علم|סביבה=بيئة|השפעה=تأثير|פתרון=حل|בעיה=مشكلة|מטרה=هدف|תוצאה=نتيجة|יתרון=ميزة|חיסרון=عيب|מחקר=بحث|אזרח=مواطن|בחירות=انتخابات|הצעה=اقتراح|רעיון=فكرة|חינוך=تعليم"),
+...w(4,"v","להחליט=يقرر|להשפיע=يؤثر|להסביר=يشرح|להציע=يقترح|להצליח=ينجح|להתכונן=يستعد|לפתור=يحل|לבדוק=يفحص|להשוות=يقارن|לתכנן=يخطط|להתעניין=يهتم|להסכים=يوافق|להתנגד=يعارض|לשפר=يحسّن|להשקיע=يستثمر"),
+...w(4,"a","חיוני=حيوي|אפשרי=ممكن|מעניין=مثير للاهتمام|מוכן=جاهز|אחראי=مسؤول"),
+
+...w(5,"n","עצמאות=استقلال|אמינות=مصداقية|סובלנות=تسامح|התמדה=مثابرة|פשרה=حل وسط|מורכבות=تعقيد|השקפה=رؤية|תודעה=وعي|יוזמה=مبادرة|התפתחות=تطور|כבוד=احترام|ערך=قيمة|אתגר=تحدٍّ|מחויבות=التزام|שקיפות=شفافية|אפליה=تمييز|עוני=فقر|שוויון=مساواة|חופש=حرية|צדק=عدالة|התנגדות=معارضة|תלות=اعتماد|מגמה=اتجاه|תעסוקה=توظيف|עובדה=حقيقة|ספק=شك|תנאי=شرط|אמון=ثقة"),
+...w(5,"v","להתמודד=يواجه|להתגבר=يتغلب|להדגיש=يبرز|להתערב=يتدخل|להתבטא=يعبّر عن رأيه|להפריך=يدحض|לדרוש=يطالب|לחשוף=يكشف|להימנע=يتجنب|לטפח=ينمّي|להסתפק=يكتفي|להתאמץ=يبذل جهدا|להתעלם=يتجاهل|להתרגל=يعتاد|להתגעגע=يشتاق|להתלונן=يشتكي|להתנצל=يعتذر"),
+...w(5,"a","סביר=معقول|מוזר=غريب|ברור=واضح|מדויק=دقيق|חריג=استثنائي|מהימן=موثوق|זמני=مؤقت|קבוע=ثابت|נחוץ=ضروري|עקבי=متسق|מורכב=معقد")
 ];
+
+/* ============ بنك الجمل [عبري, عربي, مستوى] ============ */
+const s=(l,t)=>t.split("|").map(p=>{const[h,a]=p.split("=");return[h,a,l]});
 const S=[
-["אני אוהב ללמוד עברית","أنا أحب تعلم العبرية",3],["הילד קורא ספר בבית","الولد يقرأ كتابا في البيت",3],["אנחנו הולכים לבית הספר","نحن ذاهبون إلى المدرسة",3],["אמא מכינה אוכל במטבח","أمي تحضّر الطعام في المطبخ",3],["החתול ישן על הכיסא","القطة نائمة على الكرسي",3],
-["אני רוצה לקנות לחם ומים","أريد أن أشتري خبزا وماء",4],["מתי אתה חוזר מהעבודה","متى تعود من العمل",4],["היום אנחנו לומדים מילים חדשות","اليوم نتعلم كلمات جديدة",4],["החבר שלי גר בעיר גדולה","صديقي يسكن في مدينة كبيرة",4],["אני לא זוכר איפה שמתי את הספר","لا أتذكر أين وضعت الكتاب",4],["כמה זה עולה","كم يكلف هذا",4],
-["למרות הקושי ההצלחה הגיעה בסוף","رغم الصعوبة جاء النجاح في النهاية",5],["החלטה חשובה דורשת מחשבה ואחריות","القرار المهم يتطلب تفكيرا ومسؤولية",5],["כל ניסיון נותן לנו הזדמנות ללמוד","كل تجربة تمنحنا فرصة للتعلم",5],["הוא סיפר סיפור מעניין על המשפחה שלו","روى قصة مثيرة عن عائلته",5],["אם תתאמן כל יום תדבר טוב יותר","إذا تدربت كل يوم ستتحدث أفضل",5]
+...s(1,"אני אוהב מים=أنا أحب الماء|זה בית גדול=هذا بيت كبير|יש לי כלב=عندي كلب|אמא שלי טובה=أمي طيبة|הילד קורא ספר=الولد يقرأ كتابا|אני רוצה לחם=أريد خبزا|מה שלומך=كيف حالك|שמי דני=اسمي داني|הוא אוכל תפוח=هو يأكل تفاحة|היא שותה חלב=هي تشرب حليبا|השמש חמה=الشمس حارة|אנחנו בבית=نحن في البيت|הכיסא קטן=الكرسي صغير|אבא במכונית=أبي في السيارة|יום טוב=يوم طيب"),
+...s(2,"החתול ישן על הכיסא=القط نائم على الكرسي|אנחנו הולכים לבית הספר=نحن ذاهبون إلى المدرسة|אמא מכינה אוכל במטבח=أمي تحضّر الطعام في المطبخ|אני גר בעיר גדולה=أسكن في مدينة كبيرة|החבר שלי עובד בחנות=صديقي يعمل في متجر|היום יורד גשם=المطر ينزل اليوم|אני שותה קפה בבוקר=أشرب القهوة في الصباح|הרופא בבית החולים=الطبيب في المستشفى|כמה זה עולה=كم يكلف هذا|הדלת סגורה והחלון פתוח=الباب مغلق والنافذة مفتوحة|אני הולך לשוק עם אבא=أذهب إلى السوق مع أبي|בקיץ חם מאוד=في الصيف حار جدا|יש לי שיעור בשעה שלוש=عندي درس في الساعة الثالثة|המים קרים מאוד=الماء بارد جدا|אנחנו אוכלים ארוחת ערב=نحن نأكل وجبة العشاء"),
+...s(3,"אני רוצה לקנות לחם ומים=أريد أن أشتري خبزا وماء|מתי אתה חוזר מהעבודה=متى تعود من العمل|היום אנחנו לומדים מילים חדשות=اليوم نتعلم كلمات جديدة|אני לא זוכר איפה שמתי את הספר=لا أتذكر أين وضعت الكتاب|אני אוהב ללמוד עברית=أحب تعلم العبرية|הוא שכח לשלוח את המכתב=نسي أن يرسل الرسالة|אפשר לשאול שאלה=هل يمكنني أن أسأل سؤالا|אני מחכה לאוטובוס כבר עשר דקות=أنتظر الحافلة منذ عشر دقائق|הנסיעה לירושלים לקחה שעתיים=استغرقت الرحلة إلى القدس ساعتين|אנחנו צריכים להזמין שולחן במסעדה=يجب أن نحجز طاولة في المطعم|היא עייפה כי היא עבדה כל היום=هي متعبة لأنها عملت طوال اليوم|הרופא אמר לי לקחת תרופה=قال لي الطبيب أن آخذ دواء|הפגישה מתחילה בעוד חצי שעה=يبدأ الاجتماع بعد نصف ساعة|אני לא מבין מה הוא אומר=لا أفهم ما يقوله"),
+...s(4,"למרות הקושי ההצלחה הגיעה בסוף=رغم الصعوبة جاء النجاح في النهاية|החלטה חשובה דורשת מחשבה ואחריות=القرار المهم يتطلب تفكيرا ومسؤولية|כל ניסיון נותן לנו הזדמנות ללמוד=كل تجربة تمنحنا فرصة للتعلم|הוא סיפר סיפור מעניין על המשפחה שלו=روى قصة مثيرة عن عائلته|אם תתאמן כל יום תדבר טוב יותר=إذا تدربت كل يوم ستتحدث أفضل|הממשלה הציעה פתרון חדש לבעיית הדיור=اقترحت الحكومة حلا جديدا لمشكلة السكن|המחקר הראה שהשפעת הסביבה גדולה=أظهر البحث أن تأثير البيئة كبير|אני מתכנן לנסוע לחו״ל בקיץ הבא=أخطط للسفر إلى الخارج في الصيف القادم|החברה קיבלה החלטה להשקיע בטכנולוגיה חדשה=اتخذت الشركة قرارا بالاستثمار في تكنولوجيا جديدة|לא תמיד קל להסכים עם כולם=ليس من السهل دائما الموافقة مع الجميع|הוא הצליח לפתור את הבעיה בלי עזרה=نجح في حل المشكلة دون مساعدة|צריך להשוות בין שתי ההצעות לפני שמחליטים=يجب المقارنة بين الاقتراحين قبل اتخاذ القرار|המטרה שלנו היא לשפר את התוצאות=هدفنا هو تحسين النتائج|יתרון אחד הוא המחיר הנמוך=ميزة واحدة هي السعر المنخفض|הבחירות יתקיימו בעוד חודשיים=ستجرى الانتخابات بعد شهرين"),
+...s(5,"אילו הייתי יודע לא הייתי מתעכב=لو كنت أعلم لما تأخرت|יש להימנע מהכללות שאינן מבוססות על עובדות=يجب تجنب التعميمات غير المبنية على حقائق|השקיפות היא תנאי בסיסי לאמון הציבור=الشفافية شرط أساسي لثقة الجمهور|למרות האתגרים הוא התמיד במטרתו=رغم التحديات ثابر على هدفه|סובלנות כלפי השונה היא ערך מרכזי בחברה דמוקרטית=التسامح تجاه المختلف قيمة مركزية في مجتمع ديمقراطي|הדו״ח חשף ליקויים חמורים בניהול הכספים=كشف التقرير عن عيوب خطيرة في إدارة الأموال|לא ניתן להתעלם מהשפעת הטכנולוגיה על התעסוקה=لا يمكن تجاهل تأثير التكنولوجيا على التوظيف|הפשרה שהושגה אפשרה לשני הצדדים להמשיך בדיאלוג=أتاح الحل الوسط الذي تم التوصل إليه للطرفين مواصلة الحوار|הוא נאלץ להתנצל על דבריו בפומבי=اضطر إلى الاعتذار عن أقواله علنا|המורכבות של הנושא מחייבת בחינה מעמיקה=تعقيد الموضوع يستوجب فحصا معمقا|כדי להתגבר על הקושי נדרשת התמדה=للتغلب على الصعوبة تلزم المثابرة|העובדה שהיא התנגדה להצעה הפתיעה את כולם=حقيقة أنها عارضت الاقتراح فاجأت الجميع|אין ספק שהחינוך הוא המפתח לשוויון הזדמנויות=لا شك أن التعليم هو مفتاح تكافؤ الفرص|ככל שנתאמץ יותר כך נתקדם מהר יותר=كلما اجتهدنا أكثر تقدمنا أسرع|הממצאים מצביעים על מגמה מתמשכת=النتائج تشير إلى اتجاه مستمر")
 ];
+
+/* ============ أسئلة إكمال الجملة [جملة فيها ____, الصح, [3 غلط], مستوى, شرح] ============
+   كل سؤال فيه إجابة صحيحة واحدة فقط */
+const G=[
+["אני ____ מים.","שותה",["אוכל","קורא","הולך"],1,"שותה = يشرب، والماء نشربه"],
+["הילד ____ ספר.","קורא",["שותה","ישן","אוכל"],1,"קורא = يقرأ، والكتاب نقرأه"],
+["____ שלומך?","מה",["מי","איפה","מתי"],1,"מה שלומך = كيف حالك"],
+["____ אתה גר?","איפה",["מי","כמה","מה"],1,"איפה = أين"],
+["היא ____ לבית הספר כל יום.","הולכת",["הולך","הולכים","הלכתי"],2,"היא (مؤنث) + مضارع = הולכת"],
+["אנחנו ____ ארוחת ערב בשבע.","אוכלים",["אוכל","אוכלת","אכלתי"],2,"אנחנו (نحن) + مضارع = אוכלים"],
+["אני קונה לחם ____.","בחנות",["בגשם","בירח","בשמש"],2,"בחנות = في المتجر"],
+["בחורף יורד ____.","גשם",["קפה","חלב","ספר"],2,"גשם יורד = المطر ينزل"],
+["זה הספר ____.","שלי",["אני","אותי","בי"],2,"שלי = ملكي / خاصتي"],
+["אתמול ____ לקניון עם חברים.","הלכתי",["אלך","הולך","ללכת"],3,"אתמול = أمس، فنستخدم الماضي: הלכתי"],
+["הוא עייף ____ הוא עבד כל הלילה.","כי",["אבל","אם","או"],3,"כי = لأن"],
+["הוא שכח ____ את המכתב.","לשלוח",["שלח","שולח","ישלח"],3,"שכח + مصدر (ל) = نسي أن يرسل"],
+["כשהייתי ילד, ____ הרבה בים.","שיחקתי",["אשחק","משחק","לשחק"],3,"כשהייתי ילד = لما كنت طفلا، فنستخدم الماضي"],
+["אני מתעניין ____ היסטוריה.","ב",["ל","מ","על"],4,"התעניין ב... = اهتم بـ"],
+["הוא נכשל ____ שלא למד.","מפני",["כדי","אילו","אלא"],4,"מפני ש = بسبب أنه"],
+["אילו ____ זמן, הייתי מבקר אותך.","היה לי",["יש לי","יהיה לי","היו לי"],4,"אילו + ماضي: אילו היה לי = لو كان عندي"],
+["הספר ____ קראתי אתמול היה מעניין.","אשר",["מי","איפה","כמה"],4,"אשר = الذي (اسم موصول)"],
+["אנחנו ____ לפתור את הבעיה עד מחר.","נצטרך",["נצטרכנו","צריך","צרכנו"],4,"עד מחר = حتى الغد، فنستخدم المستقبل: נצטרך"],
+["לא רק שהוא איחר, ____ גם שכח את המסמכים.","אלא",["כדי","אילו","מפני"],5,"לא רק... אלא גם = ليس فقط... بل أيضا"],
+["הוא התנצל ____ כך שאיחר.","על",["ב","ל","את"],5,"להתנצל על = يعتذر عن"],
+["להסתפק ____ מעט.","ב",["ל","על","את"],5,"להסתפק ב = يكتفي بـ"],
+["____ שנתאמץ יותר, כך נצליח יותר.","ככל",["כמו","כאשר","אילו"],5,"ככל ש... כך... = كلما... كلما..."],
+["הדו״ח ____ ליקויים רבים.","חשף",["חשפו","חשפה","נחשף"],5,"דו״ח مذكر مفرد، والفعل متعدٍّ = חשף"],
+["אילו ____ את האמת, לא הייתי שואל.","ידעתי",["אדע","יודע","אדעת"],5,"אילו + ماضي: אילו ידעתי = لو عرفت"]
+];
+
+/* ============ الحالة ============ */
 let st;try{st=JSON.parse(localStorage.getItem("hb"))}catch(e){}
 st=st||{n:1,res:[],seen:{},in:0};
+st.seen=st.seen||{};st.tick=st.tick||0;st.used=st.used||[];
 const save=()=>{try{localStorage.setItem("hb",JSON.stringify(st))}catch(e){}};
 const $=document.getElementById("app");
 const shuf=a=>a.map(x=>[Math.random(),x]).sort((x,y)=>x[0]-y[0]).map(x=>x[1]);
-const lbl=n=>n<=8?"سهل":n<=16?"متوسط":n<=28?"متقدم":n<=40?"صعب":"خبيرة";
+const esc=t=>String(t==null?"":t).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[c]);
 let Q=[],qi=0,sc=0,wr=[],pre={};
 
-function take(p,k){
-  let f=p.filter(x=>!st.seen[x[0]]);
-  if(f.length<k){p.forEach(x=>delete st.seen[x[0]]);f=p.slice()}
-  const r=shuf(f).slice(0,k);r.forEach(x=>st.seen[x[0]]=1);return r;
+/* ============ أدوات النصوص ============ */
+const HE=/[א-ת]/,AR=/[؀-ۿ]/;
+const nrm=t=>String(t||"").replace(/[֑-ׇً-ٟـ]/g,"").replace(/[^א-ת؀-ۿa-z0-9 ]/gi," ").replace(/\s+/g," ").trim().toLowerCase();
+const FIN={"ך":"כ","ם":"מ","ן":"נ","ף":"פ","ץ":"צ"};
+const finl=t=>nrm(t).replace(/[ךםןףץ]/g,c=>FIN[c]);
+function lev(a,b){const m=a.length,n=b.length,d=[];for(let i=0;i<=m;i++){d[i]=[i];}for(let j=1;j<=n;j++)d[0][j]=j;
+  for(let i=1;i<=m;i++)for(let j=1;j<=n;j++)d[i][j]=Math.min(d[i-1][j]+1,d[i][j-1]+1,d[i-1][j-1]+(a[i-1]===b[j-1]?0:1));
+  return d[m][n]}
+function tokSim(a,b){if(a===b)return 1;if(a.length<=3||b.length<=3)return 0;return 1-lev(a,b)/Math.max(a.length,b.length)}
+function speakScore(target,heard){
+  const a=finl(target).split(" ").filter(Boolean),b=finl(heard).split(" ").filter(Boolean);
+  if(!a.length||!b.length)return 0;
+  return a.reduce((sum,x)=>sum+Math.max(...b.map(y=>tokSim(x,y))),0)/a.length;
 }
-const opt=(c,i,all)=>shuf([c[i],...shuf(all.filter(x=>x[i]!==c[i])).slice(0,3).map(x=>x[i])]);
 
-function build(n){
-  const mx=n<=8?1:n<=16?2:n<=28?3:4, mn=n<=8?1:mx-1;
-  const wp=W.filter(x=>x[2]>=mn&&x[2]<=mx);
-  const sn=n<20?0:n<35?4:6, ln=n>=6?3:0, sp=n>=30?4:n>=12?3:0;
-  const sl=n<35?[3,3]:n<45?[3,4]:[4,5];
-  const sp2=S.filter(x=>x[2]>=sl[0]&&x[2]<=sl[1]);
-  const wn=PER-sn-ln-sp;
-  const wi=take(wp,wn+ln+(n>=30?0:sp));
+/* ============ الحقيقة المرجعية (للتحقق من أسئلة الذكاء الاصطناعي) ============ */
+const HEAR=new Map(),ARHE=new Map();
+W.concat(S).forEach(x=>{HEAR.set(nrm(x[0]),nrm(x[1]));ARHE.set(nrm(x[1]),nrm(x[0]))});
+
+/* ============ اختيار بدون تكرار: الجديد أولا ثم الأقدم استخداما ============ */
+function take(p,k){
+  if(k<=0)return[];
+  const fresh=shuf(p.filter(x=>!st.seen[x[0]]));
+  let r=fresh.slice(0,k);
+  if(r.length<k){
+    const old=p.filter(x=>st.seen[x[0]]).sort((a,b)=>st.seen[a[0]]-st.seen[b[0]]);
+    r=r.concat(old.slice(0,k-r.length));
+  }
+  r.forEach(x=>st.seen[x[0]]=++st.tick);
+  return r;
+}
+/* خيارات خاطئة: من نفس النوع أولا، وبدون تكرار */
+const opt=(c,i,pool)=>{
+  const bad=[],seenV=new Set([nrm(c[i])]);
+  const same=shuf(pool.filter(x=>x[i]!==c[i]&&x[3]&&x[3]===c[3]));
+  const rest=shuf(pool.filter(x=>x[i]!==c[i]&&!(x[3]&&x[3]===c[3])));
+  for(const x of same.concat(rest)){const v=nrm(x[i]);if(!seenV.has(v)){seenV.add(v);bad.push(x[i])}if(bad.length==3)break}
+  return shuf([c[i],...bad]);
+};
+
+/* ============ بناء الاختبار من البنك ============ */
+function build(n,cnt){
+  cnt=cnt||PER;
+  const L=lvl(n);
+  let [wn,ln,sn,gn,spn]={1:[6,3,2,1,3],2:[5,3,3,1,3],3:[4,2,4,2,3],4:[3,2,4,3,3],5:[3,2,4,3,3]}[L];
+  if(n<3){wn+=ln;ln=0}
+  if(n<4){wn+=spn;spn=0}
+  let extra=wn+ln+sn+gn+spn-cnt;
+  while(extra>0){if(wn>2)wn--;else if(sn>1)sn--;else if(spn>0)spn--;else if(ln>0)ln--;else if(gn>0)gn--;else break;extra--}
+  const wordSpeak=L<=2;
+  const need=wn+ln+(wordSpeak?spn:0), rv=L>1?Math.round(need*.3):0;
+  const cur=W.filter(x=>x[2]===L), prev=L>1?W.filter(x=>x[2]===L-1):[];
+  const wi=shuf(take(cur,need-rv).concat(take(prev,rv)));
+  const dist=W.filter(x=>Math.abs(x[2]-L)<=1);
+  const SL=S.filter(x=>x[2]===L), sdist=S.filter(x=>Math.abs(x[2]-L)<=1);
+  const si=take(SL,sn+(wordSpeak?0:spn));
+  const gi=take(G.filter(g=>g[3]===L||g[3]===L-1),gn);
   const q=[];
   for(let i=0;i<wn;i++){
-    const c=wi.shift(), rev=(n>8&&i%2)||i%4==3;
-    q.push(rev?{t:"rev",p:c[1],h:c[0],ans:c[0],o:opt(c,0,wp)}:{t:"mean",p:c[0],h:c[0],ans:c[1],o:opt(c,1,wp)});
+    const c=wi.shift(),rev=(L>1&&i%2==1)||i%4==3;
+    q.push(rev?{t:"rev",p:c[1],h:c[0],ans:c[0],o:opt(c,0,dist),why:"“"+c[1]+"” بالعبري: "+c[0]}
+              :{t:"mean",p:c[0],h:c[0],ans:c[1],o:opt(c,1,dist),why:c[0]+" معناها: "+c[1]});
   }
-  for(let i=0;i<ln;i++){const c=wi.shift();q.push({t:"listen",h:c[0],ans:c[1],o:opt(c,1,wp)})}
-  take(sp2,sn).forEach(c=>q.push({t:"sent",p:c[0],h:c[0],ans:c[1],o:opt(c,1,S)}));
-  (n>=30?take(sp2,sp):wi.splice(0,sp)).forEach(c=>q.push({t:"speak",p:c[0],h:c[0],ans:c[0]}));
-  return shuf(q).map(x=>(x.why=x.why||(x.t=="speak"?"انطقيها: "+x.h:x.t=="rev"?"الكلمة العبرية لـ "+x.p+" هي "+x.ans:x.h+" معناها: "+x.ans),x));
+  for(let i=0;i<ln;i++){const c=wi.shift();q.push({t:"listen",h:c[0],ans:c[1],o:opt(c,1,dist),why:c[0]+" معناها: "+c[1]})}
+  for(let i=0;i<sn;i++){const c=si.shift();q.push({t:"sent",p:c[0],h:c[0],ans:c[1],o:opt(c,1,sdist),why:c[0]+" = "+c[1]})}
+  for(let i=0;i<spn;i++){const c=wordSpeak?wi.shift():si.shift();q.push({t:"speak",p:c[0],h:c[0],ans:c[0],why:"انطقيها: "+c[0]+" ("+c[1]+")"})}
+  gi.forEach(g=>{q.push({t:"gap",p:g[0],h:g[0].replace("____",g[1]),ans:g[1],o:shuf([g[1],...g[2]]),why:g[4]+" — الجملة كاملة: "+g[0].replace("____",g[1])})});
+  return shuf(q);
 }
 
-function say(t){try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang="he-IL";u.rate=.8;speechSynthesis.speak(u)}catch(e){}}
+/* ============ صوت ============ */
+function say(t){try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang="he-IL";
+  const v=(speechSynthesis.getVoices()||[]).find(x=>/^he/i.test(x.lang));if(v)u.voice=v;u.rate=.8;speechSynthesis.speak(u)}catch(e){}}
 
+/* ============ الدخول ============ */
 function login(){
-  $.innerHTML=`<h1>לעברית </h1><h2>ברוכה הבאה, המתרגמת חביבה</h2><p>اكتبي الكود</p><input id="c" type="text" inputmode="numeric"><button class="p" onclick="chk()">دخول</button><p id="m"></p>`;
+  $.innerHTML=`<h1>לעברית </h1><h2>ברוכה הבאה, המתרגמת חביבה</h2><p>اكتبي الكود</p><input id="c" type="text" dir="ltr" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"><button class="p" onclick="chk()">دخول</button><p id="m"></p>`;
+  document.getElementById("c").addEventListener("keydown",e=>{if(e.key==="Enter")chk()});
 }
 function chk(){
-  if(document.getElementById("c").value.trim()===CODE){st.in=1;save();home()}
+  if(document.getElementById("c").value.trim().toLowerCase()===CODE.toLowerCase()){st.in=1;save();home()}
   else document.getElementById("m").textContent="الكود غلط، جرّبي تاني";
 }
 function home(){
   $.innerHTML=`<h1>ברוכה הבאה, המתרגמת חביבה</h1><div class="big">${st.n-1}</div><p>اختبار خلصتيهم</p><p>الاختبار الجاي: رقم ${st.n} · المستوى ${lbl(st.n)}</p><button class="p" onclick="start()">ابدئي الاختبار ${st.n}</button><button onclick="hist()">درجاتي ومراجعة الغلطات</button><button class="g" onclick="st.in=0;save();login()">خروج</button>`;
   getQuiz(st.n);
 }
-const okq=x=>x&&x.h&&["mean","rev","listen","sent","gap","speak"].includes(x.t)&&(x.t=="speak"||(Array.isArray(x.o)&&x.o.length==4&&x.o[x.a]!==undefined&&x.why));
+
+/* ============ الذكاء الاصطناعي: إضافة أسئلة جديدة فقط، بعد فحص صارم ============ */
+function okq(x){
+  if(!x||typeof x!=="object")return null;
+  const t=x.t,h=String(x.h||"").trim();
+  if(!["mean","rev","listen","sent"].includes(t)||!HE.test(h))return null;
+  const o=Array.isArray(x.o)?x.o.map(v=>String(v).trim()):[];
+  if(o.length!==4||o.some(v=>!v)||new Set(o.map(nrm)).size!==4)return null;
+  const a=Number(x.a);if(!Number.isInteger(a)||a<0||a>3)return null;
+  const ans=o[a],why=String(x.why||"").trim();if(!why)return null;
+  if(t==="rev"){
+    const p=String(x.p||"").trim();
+    if(!AR.test(p)||!o.every(v=>HE.test(v)&&!AR.test(v)))return null;
+    const tr=ARHE.get(nrm(p));if(tr&&tr!==nrm(ans))return null;
+    return{t,p,h:ans,o,ans,why,ai:1};
+  }
+  if(!o.every(v=>AR.test(v)&&!HE.test(v)))return null;
+  const tr=HEAR.get(nrm(h));if(tr&&tr!==nrm(ans))return null;
+  return{t,p:h,h,o,ans,why,ai:1};
+}
 async function ai(n){
   if(!API||API.includes("PUT-"))throw 0;
   const c=new AbortController(),tm=setTimeout(()=>c.abort(),30000);
   try{
-    const r=await fetch(API,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({n,avoid:(st.used||[]).slice(-120)}),signal:c.signal});
+    const r=await fetch(API,{method:"POST",headers:{"content-type":"application/json"},
+      body:JSON.stringify({n,level:LV[lvl(n)][0],count:AIMAX+4,avoid:st.used.slice(-150)}),signal:c.signal});
     const j=await r.json();
-    const q=(j.q||[]).filter(okq).map(x=>x.t=="speak"?{t:"speak",p:x.h,h:x.h,ans:x.h,why:x.why||"انطقيها: "+x.h}:{t:x.t,p:x.p||x.h,h:x.h,o:x.o,ans:x.o[x.a],why:x.why});
-    if(q.length<12)throw 0;
-    return q.slice(0,PER);
+    const used=new Set(st.used.map(nrm)),got=new Set(),out=[];
+    for(const x of(j.q||[])){
+      const q=okq(x);if(!q)continue;
+      const k=nrm(q.h);if(used.has(k)||got.has(k))continue;
+      got.add(k);out.push(q);
+    }
+    if(!out.length)throw 0;
+    return out;
   }finally{clearTimeout(tm)}
 }
 function getQuiz(n){if(!pre[n])pre[n]=ai(n).catch(()=>null);return pre[n]}
+
 async function start(){
   $.innerHTML=`<div class="top">بجهّز أسئلة جديدة...</div><div class="bar"><i style="width:60%"></i></div>`;
-  const n=st.n;let q=await getQuiz(n);delete pre[n];
-  if(q)st.used=(st.used||[]).concat(q.map(x=>x.h)).slice(-300);else q=build(n);
-  Q=q;save();qi=0;sc=0;wr=[];show();
+  const n=st.n;
+  const a=await Promise.race([getQuiz(n),new Promise(r=>setTimeout(()=>r(null),5000))]);
+  delete pre[n];
+  const k=a?Math.min(AIMAX,a.length):0;
+  const bank=build(n,PER-k);
+  const hs=new Set(bank.map(x=>nrm(x.h)));
+  const extra=a?a.filter(x=>!hs.has(nrm(x.h))).slice(0,k):[];
+  Q=shuf(bank.concat(extra));
+  st.used=st.used.concat(Q.map(x=>x.h)).slice(-300);
+  save();qi=0;sc=0;wr=[];show();
   getQuiz(n+1);
 }
+
+/* ============ عرض الأسئلة ============ */
 function show(){
   const q=Q[qi];
   let h=`<div class="top">اختبار ${st.n} · ${lbl(st.n)} · سؤال ${qi+1} من ${Q.length}</div><div class="bar"><i style="width:${qi/Q.length*100}%"></i></div>`;
+  if(q.ai)h+=`<div class="tag">✨ سؤال إضافي بالذكاء الاصطناعي</div>`;
   if(q.t=="speak"){
-    h+=`<p>انطقي بصوت واضح</p><div class="w ${q.h.length>12?'s':''}">${q.p}</div><button onclick="say(Q[qi].h)">🔊 اسمعيها الأول</button><button class="p" onclick="rec()">🎤 انطقي</button><p id="m"></p><button class="g" onclick="skip()">تخطي</button>`;
+    h+=`<p>انطقي بصوت واضح</p><div class="w ${q.h.length>12?'s':''}">${esc(q.p)}</div><button onclick="say(Q[qi].h)">🔊 اسمعيها الأول</button><button class="p" onclick="rec()">🎤 انطقي</button><p id="m"></p><button class="g" onclick="skip()">تخطي</button>`;
   }else{
-    if(q.t=="listen")h+=`<p>اسمعي الكلمة وأختاري معناها</p><button onclick="say(Q[qi].h)">🔊 اسمعي</button>`;
-    else if(q.t=="gap")h+=`<p>كمّلي الجملة بالكلمة المناسبة</p><div class="w s">${q.p}</div>`;
-    else if(q.t=="rev")h+=`<p>إيه الكلمة بالعبري؟</p><div class="w" style="font-family:inherit;font-size:30px;direction:rtl">${q.p}</div>`;
-    else h+=`<p>معناها إيه؟</p><div class="w ${q.t=="sent"?'s':''}">${q.p}</div><button class="g" onclick="say(Q[qi].h)">🔊 اسمعيها</button>`;
-    h+=q.o.map((o,i)=>`<button class="o" onclick="ans(${i})"${(q.t=="rev"||q.t=="gap")?' style="font-family:Georgia,serif;font-size:24px;direction:rtl"':''}>${o}</button>`).join("");
+    if(q.t=="listen")h+=`<p>اسمعي الكلمة واختاري معناها</p><button onclick="say(Q[qi].h)">🔊 اسمعي</button>`;
+    else if(q.t=="gap")h+=`<p>كمّلي الجملة بالكلمة المناسبة</p><div class="w s">${esc(q.p)}</div><button class="g" onclick="say(Q[qi].h)">🔊 اسمعي الجملة كاملة</button>`;
+    else if(q.t=="rev")h+=`<p>إيه الكلمة بالعبري؟</p><div class="w" style="font-family:inherit;font-size:30px;direction:rtl">${esc(q.p)}</div>`;
+    else h+=`<p>معناها إيه؟</p><div class="w ${q.t=="sent"?'s':''}">${esc(q.p)}</div><button class="g" onclick="say(Q[qi].h)">🔊 اسمعيها</button>`;
+    h+=q.o.map((o,i)=>`<button class="o" onclick="ans(${i})"${(q.t=="rev"||q.t=="gap")?' style="font-family:Georgia,serif;font-size:24px;direction:rtl"':''}>${esc(o)}</button>`).join("");
   }
   $.innerHTML=h+`<div id="nx"></div>`;
   if(q.t=="listen")say(q.h);
@@ -139,7 +285,7 @@ function mark(ok,mine){
   const q=Q[qi];
   if(ok)sc++;
   wr.push({p:q.t=="listen"?q.h:q.p,m:mine,r:q.ans,ok:ok,w:q.why});
-  document.getElementById("nx").innerHTML=`<p style="font-weight:600;color:var(--${ok?'ok':'no'})">${ok?'✔ صح!':'✘ الصح: '+q.ans}</p><p>${q.why}</p><button class="p" onclick="nxt()">${qi+1<Q.length?'التالي':'شوفي النتيجة'}</button>`;
+  document.getElementById("nx").innerHTML=`<p style="font-weight:600;color:var(--${ok?'ok':'no'})">${ok?'✔ صح!':'✘ الصح: '+esc(q.ans)}</p><p>${esc(q.why)}</p><button class="p" onclick="nxt()">${qi+1<Q.length?'التالي':'شوفي النتيجة'}</button>`;
 }
 function ans(i){
   const q=Q[qi],bs=document.querySelectorAll(".o");
@@ -147,20 +293,24 @@ function ans(i){
   if(q.o[i]!==q.ans)bs[i].classList.add("no");
   mark(q.o[i]===q.ans,q.o[i]);
 }
-const norm=s=>s.replace(/[^\u05D0-\u05EA\s]/g," ").replace(/\s+/g," ").trim();
+
+/* ============ النطق: يقبل أقرب 5 احتمالات ويتجاهل الفروق البسيطة ============ */
 function rec(){
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition,m=document.getElementById("m");
   if(!SR){m.textContent="المتصفح ده مش بيدعم الميكروفون، افتحي الرابط من Chrome";return}
-  const r=new SR();r.lang="he-IL";
+  const r=new SR();r.lang="he-IL";r.maxAlternatives=5;r.interimResults=false;
+  let got=false;
   r.onresult=e=>{
-    const a=norm(Q[qi].h).split(" "),b=norm(e.results[0][0].transcript).split(" ");
-    const hit=a.filter(x=>b.includes(x)).length;
+    got=true;
+    const alts=[];for(let i=0;i<e.results[0].length;i++)alts.push(e.results[0][i].transcript);
+    let best=0,bt=alts[0]||"";
+    alts.forEach(t=>{const sc2=speakScore(Q[qi].h,t);if(sc2>best){best=sc2;bt=t}});
     document.querySelectorAll("button").forEach(x=>x.disabled=true);
-    mark(hit/a.length>=.7,e.results[0][0].transcript);
+    mark(best>=.8,bt);
   };
-  r.onerror=()=>{m.textContent="ما سمعتش كويس، جرّبي تاني"};
-  r.onend=()=>{if(m.textContent==="بسمعك...")m.textContent="ما سمعتش كويس، جرّبي تاني"};
-  m.textContent="بسمعك...";r.start();
+  r.onerror=ev=>{m.textContent=ev.error==="not-allowed"?"لازم تسمحي للمتصفح باستخدام الميكروفون":"ما سمعتش كويس، جرّبي تاني"};
+  r.onend=()=>{if(!got&&m.textContent==="بسمعك...")m.textContent="ما سمعتش كويس، جرّبي تاني"};
+  m.textContent="بسمعك...";try{r.start()}catch(e){m.textContent="جرّبي تاني"}
 }
 function skip(){document.querySelectorAll("button").forEach(x=>x.disabled=true);mark(false,"(تخطي)")}
 function nxt(){qi++;qi<Q.length?show():fin()}
@@ -172,7 +322,7 @@ function fin(){
 function result(i,last){
   const r=st.res[i],msg=encodeURIComponent(`درجتي في اختبار ${r.n} من لعبة العبري: ${r.s} من ${r.t}`);
   $.innerHTML=`<h2>اختبار ${r.n}</h2><div class="big">${r.s} / ${r.t}</div>`+
-  (r.s==r.t?`<h3>ولا غلطة! 👏</h3>`:"")+`<h3>مراجعة الأسئلة</h3>`+r.w.map((x,k)=>`<div class="row ${x.ok?'g2':''}"><b>${k+1}. ${x.p}</b><br>${x.ok?'✔ إجابتك صح: <b>'+x.r+'</b>':'✘ إجابتك: '+x.m+'<br>الصح: <b>'+x.r+'</b>'}<br><small>${x.w||''}</small></div>`).join("")+
+  (r.s==r.t?`<h3>ولا غلطة! 👏</h3>`:"")+`<h3>مراجعة الأسئلة</h3>`+r.w.map((x,k)=>`<div class="row ${x.ok?'g2':''}"><b>${k+1}. ${esc(x.p)}</b><br>${x.ok?'✔ إجابتك صح: <b>'+esc(x.r)+'</b>':'✘ إجابتك: '+esc(x.m)+'<br>الصح: <b>'+esc(x.r)+'</b>'}<br><small>${esc(x.w||'')}</small></div>`).join("")+
   (last?`<button class="p" onclick="start()">الاختبار ${st.n}</button>`:"")+
   `<button onclick="location.href='https://wa.me/${NUM}?text=${msg}'">ابعتي الدرجة</button><button class="g" onclick="${last?'home()':'hist()'}">رجوع</button>`;
 }
